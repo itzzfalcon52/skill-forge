@@ -1,0 +1,11 @@
+import React from 'react'
+
+function AuthLayout({children}) {
+  return (
+    <main className=" flex flex-col items-center justify-center h-screen">
+        {children}
+    </main>
+  )
+}
+
+export default AuthLayout
