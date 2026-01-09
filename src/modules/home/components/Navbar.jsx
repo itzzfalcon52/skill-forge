@@ -13,7 +13,7 @@ const Navbar = ({ userRole }) => {
       <div className="bg-white/10 dark:bg-black/10 backdrop-blur-md border border-white/20 dark:border-white/10 rounded-2xl shadow-lg">
         <div className="px-6 py-4 flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="SkillForge" width={42} height={42} />
+           
             <span className="font-bold text-2xl tracking-widest text-amber-300">
               SkillForge
             </span>
