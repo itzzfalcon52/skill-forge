@@ -17,6 +17,18 @@ enum userRole{
   ADMIN
   USER
 }
+model ProblemSolved{
+  id String @id @default(uuid())
+  userId String
+  problemId String
+  solvedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, problemId])
+
+}
 
 model User{
   id String @id @default(uuid())
@@ -26,6 +38,7 @@ model User{
   firstName String?
   lastName String?
   imageUrl String?
+  solvedProblems ProblemSolved[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -44,7 +57,7 @@ enum Difficulty{
 
 model Problem{
   id String @id @default(uuid())
-  title String
+  title String 
   description String
   difficulty Difficulty @default(EASY)
   tags String[]
@@ -60,6 +73,7 @@ model Problem{
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  solvedBy ProblemSolved[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

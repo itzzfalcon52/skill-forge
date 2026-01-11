@@ -1,0 +1,43 @@
+import { currentUser } from '@clerk/nextjs/server'
+import { getAllProblems } from '@/modules/problems/actions';
+import React from 'react'
+import ProblemsTable from '@/modules/problems/components/ProblemsTable';
+import db from '@/lib/db';
+
+async function ProblemsPage() {
+    const user=await currentUser();
+    let dbUser=null;
+
+    if(user){
+        dbUser=await db.user.findUnique({
+            where:{clerkId:user.id},
+            select:{id:true,role:true}
+        });
+    }
+    const res = await getAllProblems();
+
+
+const problems = res.data;
+
+
+
+    console.log(problems);
+    
+    if (!res.success) {
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-destructive">Error loading problems: {error}</p>
+        </div>
+      );
+    }
+  
+    return (
+    
+    <div className="container mx-auto py-32 ">
+      <ProblemsTable problems={problems} user={dbUser} />
+    </div>
+ 
+    );
+}
+
+export default ProblemsPage

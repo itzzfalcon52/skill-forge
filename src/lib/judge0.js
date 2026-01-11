@@ -1,25 +1,29 @@
 import { NextResponse } from "next/server";
+import axios from "axios";
 
-export function getJudge0Id(language){
-    const languageMap={
-        "python":71,
-        "javascript":63,
-        "cpp":54,
-        "java":62,
-        "c":50,
-        "ruby":72,
-        "go":60
+export function getJudge0Id(language) {
+    const languageMap = {
+      python: 71,
+      javascript: 63,
+      cpp: 54,
     };
+  
+    return languageMap[language.toLowerCase()] || null;
+  }
+  
+  
 
-    return languageMap[language.toLowerCase()]||null;
-}
-
-export async function submitBatch(submissions){
-    const {data}=await axios.post(`${process.env.JUDGE0_API_URL}/submissions/batch?base64_encoded=false`,{submissions})
-    console.log("batch submission response:",data);
+export async function submitBatch(submissions) {
+    console.log("Submitting to Judge0:", JSON.stringify(submissions, null, 2));
+  
+    const { data } = await axios.post(
+      `${process.env.JUDGE0_API_URL}/submissions/batch?base64_encoded=false`,
+      { submissions }
+    );
+  
+    console.log("batch submission response:", data);
     return data;
-
-}
+  }
 
 export async function pollBatchResults(tokens){
     while(true){
