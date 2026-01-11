@@ -1,83 +1,166 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// ==============================
+// Prisma Client Generator
+// ==============================
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
 }
 
+// ==============================
+// Database Configuration
+// ==============================
 datasource db {
   provider = "postgresql"
 }
 
-enum userRole{
+// ==============================
+// Enums
+// ==============================
+
+// User role (Admin can create problems, users can solve)
+enum userRole {
   ADMIN
   USER
 }
-model ProblemSolved{
-  id String @id @default(uuid())
-  userId String
-  problemId String
-  solvedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, problemId])
-
-}
-
-model User{
-  id String @id @default(uuid())
-  clerkId String @unique
-  email String @unique
-  role userRole @default(USER)
-  firstName String?
-  lastName String?
-  imageUrl String?
-  solvedProblems ProblemSolved[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  problems Problem[]
-
-  @@index([role])
-
-  
-}
-
-enum Difficulty{
+// Problem difficulty
+enum Difficulty {
   EASY
   MEDIUM
   HARD
 }
 
-model Problem{
-  id String @id @default(uuid())
-  title String 
-  description String
-  difficulty Difficulty @default(EASY)
-  tags String[]
-  userId String
-  examples Json
-  constraints String
-  hints String?
-  editorial String?
+// ==============================
+// Join Table: Tracks which user solved which problem
+// ==============================
+model ProblemSolved {
+  id        String   @id @default(uuid())
+  userId    String
+  problemId String
+  solvedAt  DateTime @default(now())
 
-  testCases Json
-  codeSnippets Json
-  referenceSolution Json
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  // Prevent duplicate solves
+  @@unique([userId, problemId])
+}
+
+// ==============================
+// User Model
+// ==============================
+model User {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique   // Clerk auth ID
+  email     String   @unique
+  role      userRole @default(USER)
+
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+
+  // Relations
+  solvedProblems ProblemSolved[] // Problems this user has solved
+  submissions    Submission[]    // All submissions by this user
+  problems       Problem[]       // Problems created by this user
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  solvedBy ProblemSolved[]
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([role])
+}
+
+// ==============================
+// Problem Model (Core Entity)
+// ==============================
+model Problem {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  difficulty  Difficulty @default(EASY)
+  tags        String[]
+  userId      String
+
+  examples          Json
+  constraints       String
+  hints             String?
+  editorial         String?
+
+  testCases         Json
+  codeSnippets      Json
+  referenceSolution Json
+
+  // Relations
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  solvedBy    ProblemSolved[] // Users who solved this problem
+  submissions Submission[]    // Submissions made to this problem
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([difficulty])
+}
 
+// ==============================
+// Submission Model
+// ==============================
+// Represents ONE attempt by a user to solve a problem
+model Submission {
+  id        String @id @default(uuid())
+  userId    String
+  problemId String
 
+  sourceCode Json
+  language   String
+
+  stdin         String?
+  stdout        String?
+  stderr        String?
+  compileOutput String?
+
+  memory String?
+  time  String?
+
+  // Verdict: AC, WA, TLE, CE, RE, etc.
+  status String
+
+  submittedAt DateTime @default(now())
+
+  // Relations
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problem   Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  testCases TestCaseResult[]
+
+  @@index([status])
+}
+
+// ==============================
+// Per-Test-Case Result Model
+// ==============================
+// Stores result of EACH test case for a submission
+model TestCaseResult {
+  id           String @id @default(uuid())
+  submissionId String
+
+  testCase Int        // Index of test case
+  passed   Boolean
+
+  stdout         String?
+  stderr        String?
+
+  expected String?
+  compileOutput   String?
+
+  time   String?
+  memory String?
+
+  status String?
+
+  createdAt DateTime @default(now())
+
+  // Relation
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
 }

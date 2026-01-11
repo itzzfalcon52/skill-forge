@@ -25,7 +25,7 @@ const problems = res.data;
     
     if (!res.success) {
       return (
-        <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center justify-center min-h-screen ">
           <p className="text-destructive">Error loading problems: {error}</p>
         </div>
       );
@@ -33,7 +33,7 @@ const problems = res.data;
   
     return (
     
-    <div className="container mx-auto py-32 ">
+    <div className="container mx-auto py-32  ">
       <ProblemsTable problems={problems} user={dbUser} />
     </div>
  

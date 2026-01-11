@@ -2,9 +2,14 @@
 import db from "@/lib/db";
 import { getCurrentUser } from "@/modules/auth/actions";
 import { currentUser } from "@clerk/nextjs/server";
-import { get } from "react-hook-form";
+
 import { currentUserRole } from "@/modules/auth/actions";
 import { revalidatePath } from "next/cache";
+
+import { pollBatchResults, submitBatch } from "@/lib/judge0";
+
+import { getLanguageName } from "@/lib/judge0";
+import { success } from "zod";
 
 export async function getAllProblems() {
     try {
@@ -85,4 +90,171 @@ export async function deleteProblem(problemId){
         console.error("❌ Error deleting problem by ID:",error);
         return {success:false,message:"Failed to delete problem"};
     }
+}
+
+export const executeCode = async (source_code, language_id, stdin, expected_outputs, id) => {
+  const user = await currentUser();
+
+  const dbUser = await db.user.findUnique({
+    where: { clerkId: user.id }
+  });
+
+  if (
+    !Array.isArray(stdin) ||
+    stdin.length === 0 ||
+    !Array.isArray(expected_outputs) ||
+    expected_outputs.length !== stdin.length
+  ) {
+    return { success: false, error: "Invalid test cases" };
+  }
+
+  // 1️⃣ Prepare Judge0 submissions
+  const submissions = stdin.map((input) => ({
+    source_code,
+    language_id,
+    stdin: input,
+    base64_encoded: false,
+    wait: false,
+  }));
+
+  // 2️⃣ Submit batch
+  const submitResponse = await submitBatch(submissions);
+  const tokens = submitResponse.map((res) => res.token);
+
+  // 3️⃣ Poll results
+  const results = await pollBatchResults(tokens);
+
+  // 4️⃣ Process results
+  let finalStatus = "Accepted";
+  let allPassed = true;
+
+  const detailedResults = results.map((result, i) => {
+    const expected = expected_outputs[i]?.trim() || null;
+    const stdout = result.stdout?.trim() || null;
+    const stderr = result.stderr || null;
+    const compile_output = result.compile_output || null;
+    const judgeStatus = result.status.description;
+
+    let status = judgeStatus;
+    let passed = false;
+
+    // 🧨 Compilation Error
+    if (compile_output) {
+      status = "Compilation Error";
+      finalStatus = "Compilation Error";
+      allPassed = false;
+    }
+    // 💥 Runtime Error
+    else if (stderr) {
+      status = "Runtime Error";
+      finalStatus = "Runtime Error";
+      allPassed = false;
+    }
+    // ⏱️ TLE / MLE
+    else if (judgeStatus === "Time Limit Exceeded" || judgeStatus === "Memory Limit Exceeded") {
+      status = judgeStatus;
+      finalStatus = judgeStatus;
+      allPassed = false;
+    }
+    // ✅ Normal execution → compare output
+    else {
+      passed = stdout === expected;
+      if (!passed) {
+        status = "Wrong Answer";
+        finalStatus = "Wrong Answer";
+        allPassed = false;
+      }
+    }
+
+    return {
+      testCase: i + 1,
+      passed,
+      stdout,
+      expected,
+      stderr,
+      compile_output,
+      status,
+      memory: result.memory ? `${result.memory} KB` : null,
+      time: result.time ? `${result.time} s` : null,
+    };
+  });
+
+  // 5️⃣ Create Submission row
+  const submission = await db.submission.create({
+    data: {
+      userId: dbUser.id,
+      problemId: id,
+      sourceCode: source_code,
+      language: getLanguageName(language_id),
+      stdin: stdin.join('\n'),
+      stdout: JSON.stringify(detailedResults.map((r) => r.stdout)),
+      stderr: detailedResults.some((r) => r.stderr)
+        ? JSON.stringify(detailedResults.map((r) => r.stderr))
+        : null,
+      compileOutput: detailedResults.some((r) => r.compile_output)
+        ? JSON.stringify(detailedResults.map((r) => r.compile_output))
+        : null,
+      status: finalStatus,
+      memory: detailedResults.some((r) => r.memory)
+        ? JSON.stringify(detailedResults.map((r) => r.memory))
+        : null,
+      time: detailedResults.some((r) => r.time)
+        ? JSON.stringify(detailedResults.map((r) => r.time))
+        : null,
+    },
+  });
+
+  // 6️⃣ Mark problem solved ONLY if Accepted
+  if (finalStatus === "Accepted") {
+    await db.problemSolved.upsert({
+      where: {
+        userId_problemId: { userId: dbUser.id, problemId: id },
+      },
+      update: {},
+      create: { userId: dbUser.id, problemId: id },
+    });
+  }
+
+  // 7️⃣ Create per-test-case rows
+  const testCaseResults = detailedResults.map((result) => ({
+    submissionId: submission.id,
+    testCase: result.testCase,
+    passed: result.passed,
+    stdout: result.stdout,
+    expected: result.expected,
+    stderr: result.stderr,
+    compileOutput: result.compile_output,
+    status: result.status,
+    memory: result.memory,
+    time: result.time,
+  }));
+
+  await db.testCaseResult.createMany({ data: testCaseResults });
+
+  // 8️⃣ Return with testcases
+  const submissionWithTestCases = await db.submission.findUnique({
+    where: { id: submission.id },
+    include: { testCases: true },
+  });
+
+  return { success: true, submission: submissionWithTestCases };
+};
+
+export const getSubmissionByCurrentUserForProblem = async (problemId) => {
+  const user = await currentUser();
+
+  const dbUser=db.user.findUnique({
+    where:{clerkId:user.id},
+    select:{id:true}
+  })
+
+  
+ const submissions=await db.submission.findMany({
+  where:{
+    problemId,
+    userId:dbUser.id
+  }
+ })
+
+ return {success:true,data:submissions};
 }

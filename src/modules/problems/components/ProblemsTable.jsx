@@ -114,9 +114,9 @@ function ProblemsTable({problems,user}) {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8 p-6">
+    <div className="w-full max-w-7xl mx-auto space-y-8 p-24 h-full ">
     {/* Header */}
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col sm:flex-row justify-between items- sm:items-center gap-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Problems</h1>
         <p className="text-muted-foreground">
@@ -252,7 +252,7 @@ function ProblemsTable({problems,user}) {
                               <TrashIcon className="h-4 w-4" />
                             </Button>
                             <Button variant="outline" size="sm" disabled>
-                              <PencilIcon className="h-4 w-4" />
+                              <PencilIcon className="h-4 w-4"  />
                             </Button>
                           </>
                         )}
