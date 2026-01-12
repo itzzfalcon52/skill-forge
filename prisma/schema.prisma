@@ -64,6 +64,7 @@ model User {
   solvedProblems ProblemSolved[] // Problems this user has solved
   submissions    Submission[]    // All submissions by this user
   problems       Problem[]       // Problems created by this user
+  playlists      Playlist[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -95,6 +96,7 @@ model Problem {
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   solvedBy    ProblemSolved[] // Users who solved this problem
   submissions Submission[]    // Submissions made to this problem
+  problemsPlaylists ProblemInPlaylist[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -163,4 +165,32 @@ model TestCaseResult {
   submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   @@index([submissionId])
+}
+
+model ProblemInPlaylist{
+  id       String   @id @default(uuid())
+  playlistId String
+  problemId  String
+  createdAt DateTime @default(now())
+
+  playlist  Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  problem   Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([playlistId,problemId])
+}
+
+model Playlist{
+  id        String   @id @default(uuid())
+  name     String
+  description String?
+  problems  ProblemInPlaylist[]
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId,name])
+
+
 }
