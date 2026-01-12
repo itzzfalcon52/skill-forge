@@ -55,7 +55,7 @@ export const SubmissionHistory = ({ submissions = [] }) => {
         <CardTitle>Submission History</CardTitle>
         <CardDescription>Your previous submissions for this problem</CardDescription>
       </CardHeader>
-      <CardContent className=" p-0 overflow-hidden">
+      <CardContent className=" p-0 overflow-scroll">
         <ScrollArea className="h-full pr-4">
           <div className="space-y-3">
             {submissions.map((submission) => (
