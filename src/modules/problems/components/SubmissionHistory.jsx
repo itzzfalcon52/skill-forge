@@ -49,14 +49,14 @@ export const SubmissionHistory = ({ submissions = [] }) => {
     });
   };
 
-  return (
-    <Card className="w-full h-full flex flex-col overflow-hidden">
+  return(
+    <Card className="w-full max-h-[420px] overflow-hidden">
       <CardHeader>
         <CardTitle>Submission History</CardTitle>
         <CardDescription>Your previous submissions for this problem</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden p-0">
-        <ScrollArea className="h-full px-4 ">
+      <CardContent className=" p-0 overflow-hidden">
+        <ScrollArea className="h-full pr-4">
           <div className="space-y-3">
             {submissions.map((submission) => (
               <Card key={submission.id} className="bg-muted/50">
@@ -112,4 +112,6 @@ export const SubmissionHistory = ({ submissions = [] }) => {
       </CardContent>
     </Card>
   );
+
+  
 };
