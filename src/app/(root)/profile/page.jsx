@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { getCurrentUserData } from "@/modules/profile/actions";
 import PlaylistsSection from "@/modules/profile/components/PlaylistsSection";
 import ProfileStats from "@/modules/profile/components/ProfileStats";
