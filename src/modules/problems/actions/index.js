@@ -63,6 +63,34 @@ export async function getProblemById(problemId){
     }
 }
 
+export async function getProblemForSolver(problemId) {
+    try {
+        const problem = await db.problem.findUnique({
+            where: { id: problemId }
+        });
+
+        if (!problem) {
+            return { success: false, message: "Problem not found" };
+        }
+
+        // Safe problem without referenceSolution
+        const { referenceSolution, ...safeProblem } = problem;
+
+        // Strip output from testCases
+        if (Array.isArray(safeProblem.testCases)) {
+            safeProblem.testCases = safeProblem.testCases.map(tc => ({
+                input: tc.input
+            }));
+        }
+
+        return { success: true, data: safeProblem };
+
+    } catch (error) {
+        console.error("❌ Error fetching problem for solver:", error);
+        return { success: false, message: "Failed to fetch problem" };
+    }
+}
+
 export async function deleteProblem(problemId){
     try{
         const userRole=await currentUserRole()
@@ -92,20 +120,34 @@ export async function deleteProblem(problemId){
     }
 }
 
-export const executeCode = async (source_code, language_id, stdin, expected_outputs, id) => {
+export const executeCode = async (source_code, language_id, id) => {
   const user = await currentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
 
   const dbUser = await db.user.findUnique({
     where: { clerkId: user.id }
   });
+  if (!dbUser) {
+    return { success: false, error: "User not found" };
+  }
+
+  const problem = await db.problem.findUnique({
+    where: { id }
+  });
+  if (!problem || !Array.isArray(problem.testCases)) {
+    return { success: false, error: "Problem or test cases not found" };
+  }
+
+  const stdin = problem.testCases.map(tc => tc.input);
+  const expected_outputs = problem.testCases.map(tc => tc.output);
 
   if (
-    !Array.isArray(stdin) ||
     stdin.length === 0 ||
-    !Array.isArray(expected_outputs) ||
     expected_outputs.length !== stdin.length
   ) {
-    return { success: false, error: "Invalid test cases" };
+    return { success: false, error: "Invalid test cases in database" };
   }
 
   // 1️⃣ Prepare Judge0 submissions
@@ -237,18 +279,36 @@ export const executeCode = async (source_code, language_id, stdin, expected_outp
     include: { testCases: true },
   });
 
-  return { success: true, submission: submissionWithTestCases };
+  // Strip expected from returned testcases to avoid exposing to client
+  let safeSubmission = submissionWithTestCases;
+  if (safeSubmission && Array.isArray(safeSubmission.testCases)) {
+    safeSubmission = {
+      ...safeSubmission,
+      testCases: safeSubmission.testCases.map(tc => {
+        const { expected, ...rest } = tc;
+        return rest;
+      })
+    };
+  }
+
+  return { success: true, submission: safeSubmission };
 };
 
 export const getSubmissionByCurrentUserForProblem = async (problemId) => {
   const user = await currentUser();
+  if (!user) {
+    return { success: false, message: "Unauthorized" };
+  }
 
-  const dbUser=db.user.findUnique({
-    where:{clerkId:user.id},
-    select:{id:true}
-  })
+  const dbUser = await db.user.findUnique({
+    where: { clerkId: user.id },
+    select: { id: true }
+  });
 
-  
+  if (!dbUser) {
+    return { success: false, message: "User not found" };
+  }
+
  const submissions=await db.submission.findMany({
   where:{
     problemId,

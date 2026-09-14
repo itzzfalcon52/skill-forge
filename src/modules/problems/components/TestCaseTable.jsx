@@ -14,7 +14,6 @@ function TestCaseTable({ testCases }) {
             <TableHead>Time</TableHead>
             <TableHead>Memory</TableHead>
             <TableHead>Output / Error</TableHead>
-            <TableHead>Expected</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -51,10 +50,6 @@ function TestCaseTable({ testCases }) {
                     <span className="text-red-400">{tc.stderr}</span>
                   )}
                   {!isCompileError && !isRuntimeError && tc.stdout}
-                </TableCell>
-
-                <TableCell className="font-mono text-xs">
-                  {tc.expected || "-"}
                 </TableCell>
               </TableRow>
             );

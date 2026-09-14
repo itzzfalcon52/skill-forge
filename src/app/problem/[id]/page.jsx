@@ -14,7 +14,7 @@ import { Play, Send, Code, FileText, Lightbulb, Trophy, ArrowLeft, Loader2 } fro
 import ModeToggle from "@/components/ui/mode-toggle"
 import { toast } from 'sonner';
 import Link from 'next/link';
-import { getProblemById } from "@/modules/problems/actions"
+import { getProblemForSolver } from "@/modules/problems/actions"
 import { cn } from "@/lib/utils"
 import { executeCode } from "@/modules/problems/actions"
 import { getJudge0Id } from "@/lib/judge0"
@@ -53,7 +53,7 @@ const getDifficultyColor = (difficulty) => {
       try {
         setIsLoading(true)
         const resolvedParams = await params;
-        const problemData = await getProblemById(resolvedParams.id);
+        const problemData = await getProblemForSolver(resolvedParams.id);
         console.log(problemData);
         if (problemData.success) {
           setProblem(problemData.data);
@@ -109,10 +109,8 @@ const getDifficultyColor = (difficulty) => {
   const handleRun = async () => {
     setIsRunning(true);
     const language_id=getJudge0Id(selectedLanguage);
-    const stdin=problem.testCases.map(tc=>tc.input);
-    const expected_outputs=problem.testCases.map(tc=>tc.output);
     try {
-      const response = await executeCode(code, language_id, stdin, expected_outputs, problem.id);
+      const response = await executeCode(code, language_id, problem.id);
       console.log("Execution Response:", response);
       setExecutionResponse(response);
       if (response.submission.status === "Accepted") {
@@ -342,12 +340,6 @@ const getDifficultyColor = (difficulty) => {
                             <span className="text-muted-foreground">Input: </span>
                             <code className="bg-muted px-2 py-1 rounded text-xs">
                               {testCase.input}
-                            </code>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Expected: </span>
-                            <code className="bg-muted px-2 py-1 rounded text-xs">
-                              {testCase.output}
                             </code>
                           </div>
                         </div>
